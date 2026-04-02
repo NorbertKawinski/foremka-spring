@@ -8,7 +8,7 @@ plugins {
 
 group = "com.codechievement.foremka"
 // artifactId = "cc-foremka-spring"
-version = "0.0.1"
+version = "1.0.0"
 
 java {
     toolchain {
@@ -27,12 +27,16 @@ repositories {
 }
 
 dependencies {
-    implementation("org.springframework:spring-context:7.0.5")
+    implementation("org.springframework:spring-context:7.0.6")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.21.2")
+    compileOnly("org.slf4j:slf4j-api:2.0.17")
 
-    testImplementation("org.springframework:spring-test:7.0.5")
+    testImplementation("org.springframework:spring-test:7.0.6")
     testImplementation("org.junit.jupiter:junit-jupiter:6.0.3")
     testImplementation("org.hamcrest:hamcrest:3.0")
+    testImplementation("com.h2database:h2:2.4.240")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testRuntimeOnly("org.slf4j:slf4j-simple:2.0.17")
 }
 
 tasks.named<Test>("test") {

@@ -1,4 +1,4 @@
-package com.codechievement.foremka.v1;
+package com.codechievement.foremka.v1.api;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;

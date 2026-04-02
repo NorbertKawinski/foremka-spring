@@ -1,6 +1,6 @@
 package com.codechievement.foremka.v1.fixture;
 
-import com.codechievement.foremka.v1.ScenarioFactory;
+import com.codechievement.foremka.v1.api.ScenarioFactory;
 import org.springframework.stereotype.Component;
 
 @Component

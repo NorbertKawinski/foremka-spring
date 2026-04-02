@@ -4,14 +4,13 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 
 import com.codechievement.foremka.config.TestConfig;
-import com.codechievement.foremka.v1.fixture.UserScenario;
-import com.codechievement.foremka.v1.fixture.UserScenarioProvider;
+import com.codechievement.foremka.v1.fixture.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 
 @SpringJUnitConfig(TestConfig.class)
-class TestScenariosIntegrationTest {
+class TestScenariosBasicIntegrationTest {
 
     @Autowired
     private UserScenarioProvider userScenarioProvider;
