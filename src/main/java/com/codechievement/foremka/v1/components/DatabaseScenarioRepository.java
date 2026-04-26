@@ -18,7 +18,7 @@ import org.springframework.beans.factory.InitializingBean;
  * whenever the underlying database is reset.
  */
 public class DatabaseScenarioRepository implements ScenarioRepository, InitializingBean {
-    private static final String DEFAULT_TABLE_NAME = "foremka_test_scenarios";
+    private static final String DEFAULT_TABLE_NAME = "FOREMKA_TEST_SCENARIO";
 
     private final DataSource dataSource;
     private final SafeIdentifier tableName;

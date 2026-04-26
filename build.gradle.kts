@@ -29,6 +29,7 @@ repositories {
 dependencies {
     implementation("org.springframework:spring-context:7.0.6")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.21.2")
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.21.2")
     compileOnly("org.slf4j:slf4j-api:2.0.17")
 
     testImplementation("org.springframework:spring-test:7.0.6")

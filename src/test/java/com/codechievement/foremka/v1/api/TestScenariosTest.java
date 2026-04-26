@@ -8,23 +8,17 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import com.codechievement.foremka.v1.components.InMemoryScenarioRepository;
 import com.codechievement.foremka.v1.fixture.RectangleScenario;
 import com.codechievement.foremka.v1.fixture.UserScenario;
-import com.codechievement.foremka.v1.internal.ScenarioSerializer;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class TestScenariosTest {
-    private static final ScenarioSerializer serializer = new ScenarioSerializer(new ObjectMapper());
-
     private InMemoryScenarioRepository repository;
     private TestScenarios testScenarios;
 
     @BeforeEach
     void setUp() {
         repository = new InMemoryScenarioRepository();
-
-        testScenarios = new TestScenarios(repository, serializer);
-        testScenarios.afterPropertiesSet();
+        testScenarios = new TestScenarios(repository, SCENARIO_SERIALIZER);
     }
 
     @Test
@@ -106,8 +100,7 @@ class TestScenariosTest {
         var alice1 = testScenarios.get(USER_FACTORY, ALICE_INPUT);
 
         testScenarios.destroy();
-        TestScenarios newTestScenarios = new TestScenarios(repository, serializer);
-        newTestScenarios.afterPropertiesSet();
+        TestScenarios newTestScenarios = new TestScenarios(repository, SCENARIO_SERIALIZER);
 
         var alice2 = newTestScenarios.computeIfAbsent(UserScenario.class, "alice", input -> {
             throw new IllegalStateException(

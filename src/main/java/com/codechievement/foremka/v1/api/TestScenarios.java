@@ -1,28 +1,23 @@
 package com.codechievement.foremka.v1.api;
 
-import com.codechievement.foremka.v1.internal.ScenarioInputWithMeta;
-import com.codechievement.foremka.v1.internal.ScenarioSerializer;
-import java.util.concurrent.ConcurrentHashMap;
+import com.codechievement.foremka.v1.internal.*;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.DisposableBean;
-import org.springframework.beans.factory.InitializingBean;
 import org.springframework.stereotype.Component;
 
 @Component
-@RequiredArgsConstructor
-public class TestScenarios implements InitializingBean, DisposableBean {
+public class TestScenarios implements DisposableBean {
     private final ScenarioRepository repository;
     private final ScenarioSerializer serializer;
-    private ConcurrentHashMap<ScenarioInputWithMeta, TestScenario> scenarios;
+    private final TestScenariosMap scenarios;
 
-    /**
-     * Loads all scenarios from the repository into the in-memory cache on startup.
-     */
-    @Override
-    public void afterPropertiesSet() {
-        scenarios = repository.findAll().map(serializer::deserialize).orElseGet(ConcurrentHashMap::new);
+    public TestScenarios(ScenarioRepository repository, ScenarioSerializer serializer) {
+        this.repository = repository;
+        this.serializer = serializer;
+        this.scenarios = repository.findAll().map(serializer::deserialize).orElseGet(TestScenariosMap::new);
     }
 
     /**
@@ -38,13 +33,36 @@ public class TestScenarios implements InitializingBean, DisposableBean {
         return computeIfAbsent(clazz, "default", k -> supplier.get());
     }
 
-    @SuppressWarnings("unchecked")
     public <IN, T extends TestScenario> T computeIfAbsent(Class<T> clazz, IN input, Function<IN, T> supplier) {
-        var input2 = new ScenarioInputWithMeta(clazz, input);
-        return (T) scenarios.computeIfAbsent(input2, k -> supplier.apply(input));
+        return computeIfAbsentWithMeta(clazz, input, supplier).scenario();
+    }
+
+    @SuppressWarnings("unchecked")
+    public <IN, T extends TestScenario> TestScenarioWithMeta<T> computeIfAbsentWithMeta(
+            Class<T> clazz, IN input, Function<IN, T> supplier) {
+        String testName = TestNameDetector.detectCurrentTestName();
+        var key = new ScenarioInputWithMeta(clazz, input);
+
+        TestScenarioWithMeta<T> result = scenarios.computeIfAbsent(key, k -> {
+            Instant start = Instant.now();
+            T scenario = supplier.apply(input);
+            Duration duration = Duration.between(start, Instant.now());
+
+            TestScenarioMeta meta = new TestScenarioMeta(start, testName, duration);
+            return new TestScenarioWithMeta<>(scenario, meta);
+        });
+
+        result.meta().recordUsage(testName);
+
+        return result;
     }
 
     public <IN, OUT extends TestScenario> OUT get(ScenarioFactory<IN, OUT> factory, IN input) {
-        return computeIfAbsent(factory.getScenarioClass(), input, factory::create);
+        return getWithMeta(factory, input).scenario();
+    }
+
+    public <IN, OUT extends TestScenario> TestScenarioWithMeta<OUT> getWithMeta(
+            ScenarioFactory<IN, OUT> factory, IN input) {
+        return computeIfAbsentWithMeta(factory.getScenarioClass(), input, factory::create);
     }
 }
