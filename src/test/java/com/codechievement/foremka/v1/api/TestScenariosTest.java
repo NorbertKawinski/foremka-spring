@@ -123,6 +123,7 @@ class TestScenariosTest {
 
     @Test
     void destroy_cleanupEnabled_removesOnlyScenariosNotUsedInCurrentRun() {
+        TestScenarios.CLEANUP_TEST_SCENARIOS = true;
         var repository = new InMemoryScenarioRepository();
 
         var warmup = new TestScenarios(repository, SCENARIO_SERIALIZER);
