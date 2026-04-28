@@ -42,6 +42,7 @@ dependencies {
 
 tasks.named<Test>("test") {
     useJUnitPlatform()
+    systemProperty("CLEANUP_TEST_SCENARIOS", "true")
 }
 
 spotless {

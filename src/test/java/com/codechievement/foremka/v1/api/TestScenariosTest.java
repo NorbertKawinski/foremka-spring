@@ -8,17 +8,27 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import com.codechievement.foremka.v1.components.InMemoryScenarioRepository;
 import com.codechievement.foremka.v1.fixture.RectangleScenario;
 import com.codechievement.foremka.v1.fixture.UserScenario;
+import java.util.concurrent.atomic.AtomicBoolean;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class TestScenariosTest {
+    private static final String CLEANUP_TEST_SCENARIOS_FLAG = "CLEANUP_TEST_SCENARIOS";
+
     private InMemoryScenarioRepository repository;
     private TestScenarios testScenarios;
 
     @BeforeEach
     void setUp() {
+        System.clearProperty(CLEANUP_TEST_SCENARIOS_FLAG);
         repository = new InMemoryScenarioRepository();
         testScenarios = new TestScenarios(repository, SCENARIO_SERIALIZER);
+    }
+
+    @AfterEach
+    void tearDown() {
+        System.clearProperty(CLEANUP_TEST_SCENARIOS_FLAG);
     }
 
     @Test
@@ -109,5 +119,34 @@ class TestScenariosTest {
 
         assertThat(alice1, is(not(sameInstance(alice2))));
         assertThat(alice2, is(ALICE_SCENARIO));
+    }
+
+    @Test
+    void destroy_cleanupEnabled_removesOnlyScenariosNotUsedInCurrentRun() {
+        var repository = new InMemoryScenarioRepository();
+
+        var warmup = new TestScenarios(repository, SCENARIO_SERIALIZER);
+        warmup.get(USER_FACTORY, ALICE_INPUT);
+        warmup.get(USER_FACTORY, BOB_INPUT);
+        warmup.destroy();
+
+        var testRun = new TestScenarios(repository, SCENARIO_SERIALIZER);
+        testRun.get(USER_FACTORY, ALICE_INPUT);
+        testRun.destroy();
+
+        var restoredRun = new TestScenarios(repository, SCENARIO_SERIALIZER);
+        AtomicBoolean bobFactoryCalled = new AtomicBoolean(false);
+
+        var alice = restoredRun.computeIfAbsent(UserScenario.class, ALICE_INPUT, input -> {
+            throw new IllegalStateException("Alice should still be restored from repository");
+        });
+        var bob = restoredRun.computeIfAbsent(UserScenario.class, BOB_INPUT, input -> {
+            bobFactoryCalled.set(true);
+            return BOB_SCENARIO;
+        });
+
+        assertThat(alice, is(ALICE_SCENARIO));
+        assertThat(bob, is(BOB_SCENARIO));
+        assertThat(bobFactoryCalled.get(), is(true));
     }
 }

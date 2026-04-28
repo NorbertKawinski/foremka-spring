@@ -8,16 +8,23 @@ import java.util.function.Supplier;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.stereotype.Component;
 
+import static java.lang.Boolean.parseBoolean;
+import static java.lang.System.getProperty;
+
 @Component
 public class TestScenarios implements DisposableBean {
     private final ScenarioRepository repository;
     private final ScenarioSerializer serializer;
     private final TestScenariosMap scenarios;
+    private final Instant currentRunStartedAt;
+    private final boolean cleanupEnabled;
 
     public TestScenarios(ScenarioRepository repository, ScenarioSerializer serializer) {
         this.repository = repository;
         this.serializer = serializer;
         this.scenarios = repository.findAll().map(serializer::deserialize).orElseGet(TestScenariosMap::new);
+        this.currentRunStartedAt = Instant.now();
+        this.cleanupEnabled = parseBoolean(getProperty("CLEANUP_TEST_SCENARIOS"));
     }
 
     /**
@@ -26,6 +33,12 @@ public class TestScenarios implements DisposableBean {
      */
     @Override
     public void destroy() {
+        if (cleanupEnabled) {
+            scenarios.entrySet().removeIf(entry -> {
+                Instant lastUsedAt = entry.getValue().meta().getLastUsedAt();
+                return lastUsedAt.isBefore(currentRunStartedAt);
+            });
+        }
         repository.saveAll(serializer.serialize(scenarios));
     }
 
