@@ -14,21 +14,19 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class TestScenariosTest {
-    private static final String CLEANUP_TEST_SCENARIOS_FLAG = "CLEANUP_TEST_SCENARIOS";
-
     private InMemoryScenarioRepository repository;
     private TestScenarios testScenarios;
 
     @BeforeEach
     void setUp() {
-        System.clearProperty(CLEANUP_TEST_SCENARIOS_FLAG);
+        TestScenarios.CLEANUP_TEST_SCENARIOS = false;
         repository = new InMemoryScenarioRepository();
         testScenarios = new TestScenarios(repository, SCENARIO_SERIALIZER);
     }
 
     @AfterEach
     void tearDown() {
-        System.clearProperty(CLEANUP_TEST_SCENARIOS_FLAG);
+        TestScenarios.CLEANUP_TEST_SCENARIOS = false;
     }
 
     @Test

@@ -2,68 +2,23 @@
 
 Reusable test-data scenarios for Spring tests.
 
-## What it gives you
+## Benefits
 
-- lazy scenario creation
-- caching by input
-- optional persistence between test runs through `ScenarioRepository`
+- **Faster test suites** — scenarios are created lazily and cached by input, so expensive setup (e.g. database inserts, API calls) only runs once per unique input, no matter how many tests share that scenario.
+- **Speed up local development** — persist scenarios between test runs via `ScenarioRepository`. On the second run, scenarios are restored from storage instead of being re-created, dramatically reducing iteration time.
+- **Zero boilerplate reuse** — just call `provider.get("alice")` from any test. The same object is returned every time for the same input; no manual caching or static fields needed.
+- **Pluggable storage** — swap between in-memory, file-based, or database storage with a single bean. Bring your own `ScenarioRepository` if you need something custom.
+- **Visibility into your test suite** — run statistics (cache hits/misses, time saved, unused scenarios) are logged on shutdown so you can spot waste and optimise confidently.
+- **Plays well with Spring** — auto-configured via Spring Boot's auto-configuration mechanism; integrates naturally with `@SpringJUnitConfig` and the standard application context lifecycle.
+- **Minimal API surface** — one provider class per scenario type, one factory, one optional repository. Easy to onboard a team that has never seen the library before.
 
-## Quick start
+## Tradeoffs
 
-1. Add the dependency:
+- **Scenario invariants** — Every scenario defines assumptions about its output. Example: If you run a shop and create a scenario with a "promotional price" product, that product should always have a discount applied. Feel free to modify other fields that are not part of the invariants.
 
-```xml
-<dependency>
-    <groupId>com.codechievement.foremka</groupId>
-    <artifactId>cc-foremka-spring</artifactId>
-    <version>1.0.0</version>
-    <scope>test</scope>
-</dependency>
-```
+## Simple usage example
 
-2. Define a scenario representation:
-
-```java
-import com.codechievement.foremka.v1.api.TestScenario;
-
-public record UserScenario(String username, String email) implements TestScenario {}
-```
-
-3. Create a factory
-Factory creates the scenario.  
-The input is the cache key, so it must have stable `equals()` and `hashCode()`.  
-
-```java
-import com.codechievement.foremka.v1.api.ScenarioFactory;
-import org.springframework.stereotype.Component;
-
-@Component
-public class UserScenarioFactory implements ScenarioFactory<String, UserScenario> {
-    @Override
-    public Class<UserScenario> getScenarioClass() {
-        return UserScenario.class;
-    }
-
-    @Override
-    public UserScenario create(String username) {
-        return new UserScenario(username, username + "@test.com");
-    }
-}
-```
-
-4. Create a provider
-It exposes API for retrieving scenarios.  
-Usually, the inherited logic from ScenarioProvider<> is enough for simple cases.
-
-```java
-import com.codechievement.foremka.v1.api.ScenarioProvider;
-import org.springframework.stereotype.Component;
-
-@Component
-public class UserScenarioProvider extends ScenarioProvider<String, UserScenario> {}
-```
-
-5. Use the provider to obtain scenarios:
+For full guide (dependency, factory, provider, repository), see `QUICKSTART.md`.
 
 ```java
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -101,106 +56,22 @@ class MyIntegrationTest {
 The first `get()` call creates the scenario.  
 Later calls with the same input return the same instance.
 
-## Persistence
+See `QUICKSTART.md` for the complete usage guide.
 
-Foremka loads saved scenarios on startup and writes the cache back on shutdown.
-Choose storage by registering a `ScenarioRepository` bean.
+## Troubleshooting
 
-### In-memory (default)
+See `TROUBLESHOOTING.md` for common issues.
 
-`InMemoryScenarioRepository` is registered automatically when you do not provide another repository.
-It keeps data only in memory, so nothing survives a JVM restart.
+## Roadmap
 
-### File
-
-`FileScenarioRepository` stores the cache as JSON on disk:
-
-```java
-import com.codechievement.foremka.v1.components.FileScenarioRepository;
-import java.nio.file.Path;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-
-@Configuration
-public class TestConfig {
-
-    @Bean
-    FileScenarioRepository scenarioRepository() {
-        return new FileScenarioRepository(Path.of("test-scenarios.db.json"));
-    }
-}
-```
-
-Parent directories are created automatically.
-
-### Database (JDBC)
-
-`DatabaseScenarioRepository` stores the cache in a custom table.  
-The table is created automatically so no extra setup beyond DataSource is needed.  
-This option is recommended for local development environments that already have a database, because the scenario data is stored (and cleared) alongside the rest of the data
-
-```java
-import com.codechievement.foremka.v1.components.DatabaseScenarioRepository;
-import javax.sql.DataSource;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-
-@Configuration
-public class TestConfig {
-
-    @Bean
-    DatabaseScenarioRepository scenarioRepository(DataSource dataSource) {
-        return new DatabaseScenarioRepository(dataSource);
-    }
-}
-```
-
-The default table name is `FOREMKA_TEST_SCENARIO`. You can override it with:
-
-```java
-var repository = new DatabaseScenarioRepository(dataSource, "my_test_scenarios");
-```
-
-### Custom storage
-
-Implement `ScenarioRepository` and register it as a Spring bean:
-
-```java
-import com.codechievement.foremka.v1.api.ScenarioRepository;
-import java.util.Optional;
-import org.springframework.stereotype.Component;
-
-@Component
-public class MyScenarioRepository implements ScenarioRepository {
-
-    @Override
-    public Optional<String> findAll() {
-        return Optional.empty();
-    }
-
-    @Override
-    public void saveAll(String data) {
-        // save serialized JSON
-    }
-}
-```
-
-## Cleanup
-
-Set `CLEANUP_TEST_SCENARIOS=true` environment variable to remove scenarios that were not used during a test run.
-This is best enabled for full test-suite runs, not for selective test execution, to avoid removing scenarios for tests that simply did not run.
-
-### Gradle configuration
-
-```kotlin
-tasks.named<Test>("test") {
-    useJUnitPlatform()
-    systemProperty("CLEANUP_TEST_SCENARIOS", "true")
-}
-```
-
-### One-off run
-
-```bash
-./gradlew test -DCLEANUP_TEST_SCENARIOS=true
-```
+1. Incremental saving of scenarios to database
+  * Currently only on shutdown
+  * Make each scenario an independent record. 
+  * Use background thread for synchronization (batch inserts).
+  * Use delete by id for cleanup
+2. Locking scenarios for exclusive access
+  * Example: Two concurrent tests that reuse the same ProductScenario. 
+  * One modifies the product category, the other modifies the product price.
+  * Scenario invariants make no assumptions about either of these changes.
+  * Both tests can reuse this scenario, but not at the same time.
+3. Improve concurrency support. Ex: TestScenarioMeta is not thread safe right now.

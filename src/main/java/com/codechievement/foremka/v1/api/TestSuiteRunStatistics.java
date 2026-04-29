@@ -14,8 +14,8 @@ public record TestSuiteRunStatistics(
             Duration savedTime,
             TestScenariosMap scenarios) {
 
-        long numUnusedScenarios = scenarios.values().stream()
-                .filter(entry -> entry.meta().getLastUsedAt().isBefore(currentRunStartedAt))
+        long numUnusedScenarios = scenarios.stream()
+                .filter(s -> s.meta().getLastUsedAt().isBefore(currentRunStartedAt))
                 .count();
 
         return new TestSuiteRunStatistics(currentRunStartedAt, cacheHits, cacheMisses, savedTime, numUnusedScenarios);

@@ -1,17 +1,16 @@
 package com.codechievement.foremka.v1.internal;
 
 import com.codechievement.foremka.v1.api.TestScenario;
-import com.codechievement.foremka.v1.api.TestScenarioMeta;
-import com.codechievement.foremka.v1.api.TestScenarioWithMeta;
-import com.fasterxml.jackson.core.type.TypeReference;
+import com.codechievement.foremka.v1.api.TestScenarioWithExtra;
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.Map.Entry;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 
 /**
@@ -24,53 +23,81 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 @Slf4j
 public class ScenarioSerializer {
-    public record SerializableScenarioEntry(Object input, TestScenario scenario, TestScenarioMeta meta) {}
-
     private final ObjectMapper objectMapper;
 
     @SneakyThrows
     public String serialize(TestScenariosMap scenarios) {
-        Map<String, List<SerializableScenarioEntry>> serializable = new HashMap<>();
-        scenarios.forEach((input, holder) -> {
-            String typeName = input.type().getName();
-            serializable
-                    .computeIfAbsent(typeName, k -> new ArrayList<>())
-                    .add(new SerializableScenarioEntry(input.key(), holder.scenario(), holder.meta()));
+        Map<String, List<TestScenarioWithExtra<?, ?>>> serializable = new HashMap<>();
+
+        scenarios.forEach(s -> {
+            s.meta().compress();
+
+            String scenarioClazzName = s.scenario().getClass().getName();
+            String inputClazzName = s.input().getClass().getName();
+            String key = scenarioClazzName + "/" + inputClazzName;
+
+            serializable.computeIfAbsent(key, k -> new ArrayList<>()).add(s);
         });
-        return objectMapper.writeValueAsString(serializable);
+
+        JsonNode tree = objectMapper.valueToTree(serializable);
+        return objectMapper.writeValueAsString(tree);
     }
 
     @SneakyThrows
     public TestScenariosMap deserialize(String data) {
         TestScenariosMap result = new TestScenariosMap();
-        Map<String, List<Map<String, Object>>> raw = objectMapper.readValue(data, new TypeReference<>() {});
+        JsonNode rawScenariosByClazz = objectMapper.readTree(data);
 
-        for (Map.Entry<String, List<Map<String, Object>>> typeEntry : raw.entrySet()) {
-            String typeName = typeEntry.getKey();
-            Class<? extends TestScenario> scenarioType;
-            try {
-                scenarioType = ClassUtils.forName(typeName);
-            } catch (ClassNotFoundException e) {
-                log.warn("Skipping scenario type that cannot be resolved: {}", typeName);
-                // Users may have removed or renamed scenario classes since the last run.
-                // The library will recover automatically by recreating missing scenarios as needed,
-                // so we can safely skip unresolvable types at the cost of time needed to do so.
+        for (Entry<String, JsonNode> rawScenariosEntry : rawScenariosByClazz.properties()) {
+            JavaType type = parseType(rawScenariosEntry.getKey());
+            if (type == null) {
                 continue;
             }
-            for (Map<String, Object> rawEntry : typeEntry.getValue()) {
-                Object input = rawEntry.get("input");
-                Object rawScenario = rawEntry.get("scenario");
-                Object rawMeta = rawEntry.get("meta");
-                deserializeEntry(result, scenarioType, input, rawScenario, rawMeta);
-            }
+
+            JsonNode rawScenarios = rawScenariosEntry.getValue();
+            rawScenarios
+                    .valueStream()
+                    .map(rawScenario -> deserialize(type, rawScenario))
+                    .filter(Objects::nonNull)
+                    .forEach(result::add);
         }
         return result;
     }
 
-    private <T extends TestScenario> void deserializeEntry(
-            TestScenariosMap result, Class<T> scenarioType, Object input, Object rawScenario, Object rawMeta) {
-        T scenario = objectMapper.convertValue(rawScenario, scenarioType);
-        TestScenarioMeta meta = objectMapper.convertValue(rawMeta, TestScenarioMeta.class);
-        result.put(new ScenarioInputWithMeta(scenarioType, input), new TestScenarioWithMeta<>(scenario, meta));
+    private @Nullable JavaType parseType(String key) {
+        Class<? extends TestScenario> scenarioClazz;
+        Class<?> inputClazz;
+        String[] keyParts = key.split("/");
+        String scenarioClazzName = keyParts[0];
+        String inputClazzName = keyParts[1];
+        try {
+            scenarioClazz = ClassUtils.forName(scenarioClazzName);
+            inputClazz = ClassUtils.forName(inputClazzName);
+            return objectMapper
+                    .getTypeFactory()
+                    .constructParametricType(TestScenarioWithExtra.class, inputClazz, scenarioClazz);
+        } catch (ClassNotFoundException e) {
+            log.warn("Skipping scenario type that cannot be resolved: {}", key);
+            // Users may have removed or renamed scenario classes since the last run.
+            // The library will recover automatically by recreating missing scenarios as needed,
+            // so we can safely skip unresolvable types at the cost of time needed to do so.
+            return null;
+        }
+    }
+
+    private <IN, T extends TestScenario> @Nullable TestScenarioWithExtra<IN, T> deserialize(
+            JavaType type, JsonNode rawScenario) {
+        try {
+            TestScenarioWithExtra<IN, T> scenario = objectMapper.treeToValue(rawScenario, type);
+            scenario.meta().decompress();
+            return scenario;
+        } catch (Exception e) {
+            // Users may have changed the structure of scenario classes since the last run, causing deserialization to
+            // fail.
+            // The library will recover automatically by recreating missing scenarios as needed,
+            // so we can safely skip unresolvable entries at the cost of time needed to do so.
+            log.warn("Failed to deserialize scenario entry of type {}. Skipping entry.", type, e);
+            return null;
+        }
     }
 }

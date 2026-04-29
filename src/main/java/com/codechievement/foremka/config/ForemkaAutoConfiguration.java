@@ -13,7 +13,7 @@ public class ForemkaAutoConfiguration {
 
     @Bean
     @Fallback
-    ObjectMapper objectMapper() {
+    ObjectMapper foremkaFallbackObjectMapper() {
         return createObjectMapper();
     }
 
@@ -25,7 +25,7 @@ public class ForemkaAutoConfiguration {
 
     @Bean
     @Fallback
-    ScenarioRepository scenarioRepository() {
+    ScenarioRepository foremkaFallbackScenarioRepository() {
         return new InMemoryScenarioRepository();
     }
 }

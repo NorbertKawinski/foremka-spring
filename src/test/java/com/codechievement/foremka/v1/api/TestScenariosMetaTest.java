@@ -27,7 +27,7 @@ class TestScenariosMetaTest {
         testScenarios = new TestScenarios(new InMemoryScenarioRepository(), SCENARIO_SERIALIZER);
 
         instantBeforeFactory = Instant.now();
-        meta = testScenarios.getWithMeta(USER_FACTORY, ALICE_INPUT).meta();
+        meta = testScenarios.getWithExtra(USER_FACTORY, ALICE_INPUT).meta();
         instantAfterFactory = Instant.now();
     }
 
@@ -41,7 +41,7 @@ class TestScenariosMetaTest {
     void meta_createdByTest_isSetProperly() {
         assertThat(meta.getCreatedByTest(), equalTo("TestScenariosMetaTest.setup"));
 
-        meta = testScenarios.getWithMeta(USER_FACTORY, BOB_INPUT).meta();
+        meta = testScenarios.getWithExtra(USER_FACTORY, BOB_INPUT).meta();
         assertThat(meta.getCreatedByTest(), equalTo("TestScenariosMetaTest.meta_createdByTest_isSetProperly"));
     }
 
@@ -62,7 +62,7 @@ class TestScenariosMetaTest {
     @Test
     void meta_lastUsedAt_isUpdatedOnEachAccess() throws InterruptedException {
         Instant beforeNextAccess = Instant.now();
-        meta = testScenarios.getWithMeta(USER_FACTORY, ALICE_INPUT).meta();
+        meta = testScenarios.getWithExtra(USER_FACTORY, ALICE_INPUT).meta();
         Instant afterNextAccess = Instant.now();
 
         assertThat(meta.getLastUsedAt().isBefore(beforeNextAccess), is(false));
@@ -76,8 +76,8 @@ class TestScenariosMetaTest {
 
     @Test
     void meta_totalUsageCount_incrementsOnCacheHit() {
-        testScenarios.getWithMeta(USER_FACTORY, ALICE_INPUT);
-        meta = testScenarios.getWithMeta(USER_FACTORY, ALICE_INPUT).meta();
+        testScenarios.getWithExtra(USER_FACTORY, ALICE_INPUT);
+        meta = testScenarios.getWithExtra(USER_FACTORY, ALICE_INPUT).meta();
 
         assertThat(meta.getTotalUsageCount(), is(3L));
     }
@@ -89,7 +89,7 @@ class TestScenariosMetaTest {
                 meta.getUsedByTests(),
                 not(contains("TestScenariosMetaTest.meta_usedByTests_containsCurrentTestOnCreation")));
 
-        meta = testScenarios.getWithMeta(USER_FACTORY, ALICE_INPUT).meta();
+        meta = testScenarios.getWithExtra(USER_FACTORY, ALICE_INPUT).meta();
         assertThat(
                 meta.getUsedByTests(),
                 containsInAnyOrder(
@@ -99,9 +99,9 @@ class TestScenariosMetaTest {
 
     @Test
     void meta_usedByTests_doesNotDuplicateSameCaller() {
-        testScenarios.getWithMeta(USER_FACTORY, ALICE_INPUT);
-        testScenarios.getWithMeta(USER_FACTORY, ALICE_INPUT);
-        meta = testScenarios.getWithMeta(USER_FACTORY, ALICE_INPUT).meta();
+        testScenarios.getWithExtra(USER_FACTORY, ALICE_INPUT);
+        testScenarios.getWithExtra(USER_FACTORY, ALICE_INPUT);
+        meta = testScenarios.getWithExtra(USER_FACTORY, ALICE_INPUT).meta();
 
         long count = meta.getUsedByTests().stream()
                 .filter(testName ->

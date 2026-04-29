@@ -8,7 +8,8 @@
 ## Architecture (read these first)
 - `TestScenarios` is the orchestrator: in-memory cache + lifecycle persistence.
 - `ScenarioProvider<IN, OUT>` delegates `get(input)` to `TestScenarios` using an injected `ScenarioFactory<IN, OUT>`.
-- `ScenarioSerializer` converts cache `<ScenarioInputWithMeta, TestScenario>` to JSON and back.
+- Cache entries are stored as `TestScenarioWithExtra` and tracked with `TestScenarioMeta`; run-level metrics are exposed via `TestSuiteRunStatistics`.
+- `ScenarioSerializer` converts cache `<ScenarioInputWithExtra, TestScenario>` to JSON and back.
 - `ScenarioRepository` is the storage boundary; built-in implementations:
   - `InMemoryScenarioRepository` (default fallback bean)
   - `FileScenarioRepository` (used in tests via `TestConfig`)
@@ -16,9 +17,9 @@
 - Auto-config entrypoint: `ForemkaAutoConfiguration` + `src/main/resources/META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`.
 
 ## Runtime data flow
-- Startup (`afterPropertiesSet`): `TestScenarios` loads serialized JSON from `ScenarioRepository.findAll()` into `ConcurrentHashMap`.
-- Access (`ScenarioProvider.get`): compute key as `(scenario class, input)` via `ScenarioInputWithMeta`, then `computeIfAbsent`.
-- Shutdown (`destroy`): `TestScenarios` serializes full cache and calls `ScenarioRepository.saveAll(...)`.
+- Startup (constructor): `TestScenarios` loads serialized JSON from `ScenarioRepository.findAll()` into `TestScenariosMap`.
+- Access (`ScenarioProvider.get`): compute key as `(scenario class, input)` via `ScenarioInputWithExtra`, then `computeIfAbsent`; cache hits update `TestScenarioMeta` (`lastUsedAt`, `totalUsageCount`, `usedByTests`) using `TestNameDetector`.
+- Shutdown (`destroy`): `TestScenarios` logs `getSummaryStatistics()`, optionally removes scenarios not used in the current run when `CLEANUP_TEST_SCENARIOS=true`, then calls `ScenarioRepository.saveAll(...)`.
 - Serializer groups entries by scenario class FQCN; unknown classes during restore are skipped with warning.
 
 ## Project-specific conventions
@@ -32,12 +33,14 @@
 - Run tests: `./gradlew test` (Windows: `gradlew.bat test`).
 - Formatting uses Spotless + Palantir Java Format (`./gradlew spotlessApply`).
 - Java baseline is 21 (toolchain + source/target in `build.gradle.kts`).
+- In this repo, `test` task sets `CLEANUP_TEST_SCENARIOS=true` by default (`build.gradle.kts`); override per-run if you need to keep all historical scenarios.
 
 ## Testing patterns to follow
 - Unit tests use JUnit 6 + Hamcrest (`assertThat`, `is`, `sameInstance`).
 - Integration-style Spring tests use `@SpringJUnitConfig(TestConfig.class)` and real wiring.
 - File persistence tests isolate filesystem with `@TempDir`; DB tests use unique H2 in-memory DB URLs.
 - For cache behavior, assert factory/supplier is NOT called on repeated key (see `TestScenariosTest`).
+- For metadata/statistics behavior, use `getWithExtra(...)` and `getSummaryStatistics()` assertions (see `TestScenariosMetaTest`, `TestSuiteRunStatisticsTest`).
 
 ## External dependencies and boundaries
 - Spring Context/Test, Jackson Databind, Lombok, H2 (tests), SLF4J API/simple.

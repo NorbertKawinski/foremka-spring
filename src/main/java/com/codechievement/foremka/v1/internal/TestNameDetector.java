@@ -18,8 +18,9 @@ import lombok.SneakyThrows;
  * a compile-time dependency on JUnit.
  */
 public final class TestNameDetector {
+    public static String OVERRIDE_TEST_NAME;
 
-    private static final Set<String> ANNOTATION_CLASSES = Set.of(
+    public static Set<String> ANNOTATION_CLASSES = Set.of(
             "org.junit.Test",
             "org.junit.jupiter.api.Test",
             "org.junit.jupiter.params.ParameterizedTest",
@@ -28,6 +29,12 @@ public final class TestNameDetector {
             "org.junit.jupiter.api.BeforeEach");
 
     public static String detectCurrentTestName() {
+        if (OVERRIDE_TEST_NAME != null) {
+            String result = OVERRIDE_TEST_NAME;
+            OVERRIDE_TEST_NAME = null;
+            return result;
+        }
+
         var testFrame = StackWalker.getInstance(RETAIN_CLASS_REFERENCE).walk(TestNameDetector::findTestFrame);
         return testFrame.getDeclaringClass().getSimpleName() + "." + testFrame.getMethodName();
     }

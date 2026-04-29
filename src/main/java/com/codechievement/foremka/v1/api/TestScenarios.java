@@ -29,7 +29,16 @@ public class TestScenarios implements DisposableBean {
     public TestScenarios(ScenarioRepository repository, ScenarioSerializer serializer) {
         this.repository = repository;
         this.serializer = serializer;
-        this.scenarios = repository.findAll().map(serializer::deserialize).orElseGet(TestScenariosMap::new);
+        this.scenarios = loadScenarios();
+    }
+
+    private TestScenariosMap loadScenarios() {
+        try {
+            return repository.findAll().map(serializer::deserialize).orElseGet(TestScenariosMap::new);
+        } catch (Exception e) {
+            log.warn("Failed to load test scenarios. Using empty scenario map", e);
+            return new TestScenariosMap();
+        }
     }
 
     /**
@@ -41,10 +50,7 @@ public class TestScenarios implements DisposableBean {
         log.info("Test suite run statistics: {}", getSummaryStatistics());
 
         if (CLEANUP_TEST_SCENARIOS) {
-            scenarios.entrySet().removeIf(entry -> {
-                Instant lastUsedAt = entry.getValue().meta().getLastUsedAt();
-                return lastUsedAt.isBefore(currentRunStartedAt);
-            });
+            scenarios.removeIf(s -> s.meta().getLastUsedAt().isBefore(currentRunStartedAt));
         }
         repository.saveAll(serializer.serialize(scenarios));
     }
@@ -54,17 +60,18 @@ public class TestScenarios implements DisposableBean {
     }
 
     public <IN, T extends TestScenario> T computeIfAbsent(Class<T> clazz, IN input, Function<IN, T> supplier) {
-        return computeIfAbsentWithMeta(clazz, input, supplier).scenario();
+        return computeIfAbsentWithExtra(clazz, input, supplier).scenario();
     }
 
-    @SuppressWarnings("unchecked")
-    public <IN, T extends TestScenario> TestScenarioWithMeta<T> computeIfAbsentWithMeta(
+    public <IN, T extends TestScenario> TestScenarioWithExtra<IN, T> computeIfAbsentWithExtra(
             Class<T> clazz, IN input, Function<IN, T> supplier) {
         String testName = TestNameDetector.detectCurrentTestName();
-        var key = new ScenarioInputWithMeta(clazz, input);
-        TestScenarioWithMeta<T> result = scenarios.computeIfAbsent(key, k -> compute(input, supplier, testName));
 
-        if (result.meta().getTotalUsageCount() == 0) {
+        TestScenarioWithExtra<IN, T> result =
+                scenarios.computeIfAbsent(clazz, input, () -> compute(input, supplier, testName));
+        result.meta().recordUsage(testName);
+
+        if (result.meta().getTotalUsageCount() == 1) {
             cacheMissesInCurrentRun.incrementAndGet();
         } else {
             cacheHitsInCurrentRun.incrementAndGet();
@@ -72,18 +79,17 @@ public class TestScenarios implements DisposableBean {
                     result.meta().getCreationDuration().toNanos());
         }
 
-        result.meta().recordUsage(testName);
         return result;
     }
 
-    private <IN, T extends TestScenario> TestScenarioWithMeta<T> compute(
+    private <IN, T extends TestScenario> TestScenarioWithExtra<IN, T> compute(
             IN input, Function<IN, T> supplier, String testName) {
         Instant start = Instant.now();
         T scenario = supplier.apply(input);
         Duration duration = Duration.between(start, Instant.now());
 
         TestScenarioMeta meta = new TestScenarioMeta(start, testName, duration);
-        return new TestScenarioWithMeta<>(scenario, meta);
+        return new TestScenarioWithExtra<>(input, scenario, meta);
     }
 
     public TestSuiteRunStatistics getSummaryStatistics() {
@@ -95,12 +101,12 @@ public class TestScenarios implements DisposableBean {
                 scenarios);
     }
 
-    public <IN, OUT extends TestScenario> OUT get(ScenarioFactory<IN, OUT> factory, IN input) {
-        return getWithMeta(factory, input).scenario();
+    public <IN, T extends TestScenario> T get(ScenarioFactory<IN, T> factory, IN input) {
+        return getWithExtra(factory, input).scenario();
     }
 
-    public <IN, OUT extends TestScenario> TestScenarioWithMeta<OUT> getWithMeta(
-            ScenarioFactory<IN, OUT> factory, IN input) {
-        return computeIfAbsentWithMeta(factory.getScenarioClass(), input, factory::create);
+    public <IN, T extends TestScenario> TestScenarioWithExtra<IN, T> getWithExtra(
+            ScenarioFactory<IN, T> factory, IN input) {
+        return computeIfAbsentWithExtra(factory.getScenarioClass(), input, factory::create);
     }
 }
