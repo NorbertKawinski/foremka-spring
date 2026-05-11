@@ -1,4 +1,4 @@
-# cc-foremka-spring
+# foremka-spring
 
 Reusable test-data scenarios for Spring tests.
 

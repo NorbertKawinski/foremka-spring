@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "com.codechievement.foremka"
-// artifactId = "cc-foremka-spring"
+// artifactId = "foremka-spring"
 version = "1.0.0"
 
 java {
@@ -70,7 +70,7 @@ publishing {
             pom {
                 name = "Foremka"
                 description = "A framework for managing test data in Spring applications."
-                url = "https://github.com/NorbertKawinski/cc-foremka-spring"
+                url = "https://github.com/NorbertKawinski/foremka-spring"
                 licenses {
                     license {
                         name = "Apache License 2.0"
@@ -83,7 +83,7 @@ publishing {
                 }
                 issueManagement {
                     system = "GitHub"
-                    url = "https://github.com/NorbertKawinski/cc-foremka-spring/issues"
+                    url = "https://github.com/NorbertKawinski/foremka-spring/issues"
                 }
                 developers {
                     developer {
@@ -93,9 +93,9 @@ publishing {
                     }
                 }
                 scm {
-                    url = "https://github.com/NorbertKawinski/cc-foremka-spring"
-                    connection = "scm:git:git://github.com/NorbertKawinski/cc-foremka-spring.git"
-                    developerConnection = "scm:git:ssh://git@github.com:NorbertKawinski/cc-foremka-spring.git"
+                    url = "https://github.com/NorbertKawinski/foremka-spring"
+                    connection = "scm:git:git://github.com/NorbertKawinski/foremka-spring.git"
+                    developerConnection = "scm:git:ssh://git@github.com:NorbertKawinski/foremka-spring.git"
                 }
             }
         }

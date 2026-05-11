@@ -1,7 +1,7 @@
 # AGENTS.md
 
 ## What this project is
-- `cc-foremka-spring` is a Spring library for reusable test-data scenarios.
+- `foremka-spring` is a Spring library for reusable test-data scenarios.
 - Core idea: scenario objects are created lazily, cached by input, and persisted between test runs.
 - Code lives in `src/main/java/com/codechievement/foremka`.
 

@@ -7,7 +7,7 @@
 ```xml
 <dependency>
     <groupId>com.codechievement.foremka</groupId>
-    <artifactId>cc-foremka-spring</artifactId>
+    <artifactId>foremka-spring</artifactId>
     <version>1.0.0</version>
     <scope>test</scope>
 </dependency>

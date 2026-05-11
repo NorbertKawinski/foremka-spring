@@ -1,1 +1,1 @@
-rootProject.name = "cc-foremka-spring"
+rootProject.name = "foremka-spring"
