@@ -14,7 +14,7 @@ Reusable test-data scenarios for Spring tests.
 
 ## Tradeoffs
 
-- **Scenario invariants** — Every scenario defines assumptions about its output. Example: If you run a shop and create a scenario with a "promotional price" product, that product should always have a discount applied. Feel free to modify other fields that are not part of the invariants.
+- **Scenario invariants** — Every scenario defines assumptions about its output. Example: A `ProductScenario` with category `SEASONAL` invariably has its `discountedPrice` computed as 30 % off; a `UserScenario` for `"alice"` invariably has `role = "USER"`. Tests may freely modify fields that are *not* part of these invariants, but the invariant fields should be left untouched.
 
 ## Simple usage example
 
@@ -37,10 +37,14 @@ class MyIntegrationTest {
 
     @Test
     void testWithScenario() {
+        // The factory runs once: inserts the user row, assigns an ID and role.
+        // Every subsequent call for "alice" returns the same cached instance.
         UserScenario alice = userScenarioProvider.get("alice");
 
+        assertThat(alice.id(), startsWith("user-"));
         assertThat(alice.username(), is("alice"));
-        assertThat(alice.email(), is("alice@test.com"));
+        assertThat(alice.email(), is("alice@example.com"));
+        assertThat(alice.role(), is("USER"));
     }
 
     @Test

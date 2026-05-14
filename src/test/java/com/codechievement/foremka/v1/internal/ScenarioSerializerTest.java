@@ -8,8 +8,8 @@ import static org.hamcrest.Matchers.*;
 
 import com.codechievement.foremka.v1.api.TestScenarioMeta;
 import com.codechievement.foremka.v1.api.TestScenarioWithExtra;
-import com.codechievement.foremka.v1.fixture.RectangleInput;
-import com.codechievement.foremka.v1.fixture.RectangleScenario;
+import com.codechievement.foremka.v1.fixture.ProductInput;
+import com.codechievement.foremka.v1.fixture.ProductScenario;
 import com.codechievement.foremka.v1.fixture.UserScenario;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,7 +18,7 @@ class ScenarioSerializerTest {
     private final ScenarioSerializer serializer = SCENARIO_SERIALIZER;
     private TestScenarioWithExtra<String, UserScenario> ALICE_WITH_EXTRA;
     private TestScenarioWithExtra<String, UserScenario> BOB_WITH_EXTRA;
-    private TestScenarioWithExtra<RectangleInput, RectangleScenario> RECTANGLE_WITH_EXTRA;
+    private TestScenarioWithExtra<ProductInput, ProductScenario> PRODUCT_WITH_EXTRA;
 
     @BeforeEach
     public void setup() {
@@ -28,8 +28,8 @@ class ScenarioSerializerTest {
         TestScenarioMeta BOB_META = new TestScenarioMeta(ofEpochSecond(2), "bobTest", ofSeconds(2));
         BOB_WITH_EXTRA = new TestScenarioWithExtra<>(BOB_INPUT, BOB_SCENARIO, BOB_META);
 
-        TestScenarioMeta RECTANGLE_META = new TestScenarioMeta(ofEpochSecond(3), "rectangleTest", ofSeconds(3));
-        RECTANGLE_WITH_EXTRA = new TestScenarioWithExtra<>(RECTANGLE_INPUT, RECTANGLE_SCENARIO, RECTANGLE_META);
+        TestScenarioMeta PRODUCT_META = new TestScenarioMeta(ofEpochSecond(3), "productTest", ofSeconds(3));
+        PRODUCT_WITH_EXTRA = new TestScenarioWithExtra<>(PRODUCT_INPUT, PRODUCT_SCENARIO, PRODUCT_META);
     }
 
     @Test
@@ -65,8 +65,10 @@ class ScenarioSerializerTest {
         assertThat(restoredInput, is("alice"));
 
         UserScenario restoredScenario = restoredScenarioWithExtra.scenario();
+        assertThat(restoredScenario.id(), is(ALICE_SCENARIO.id()));
         assertThat(restoredScenario.username(), is("alice"));
-        assertThat(restoredScenario.email(), is("alice@test.com"));
+        assertThat(restoredScenario.email(), is("alice@example.com"));
+        assertThat(restoredScenario.role(), is("USER"));
 
         // Please note that most of meta is restored based on decompression
         TestScenarioMeta restoredMeta = restoredScenarioWithExtra.meta();
@@ -80,7 +82,7 @@ class ScenarioSerializerTest {
 
     @Test
     void serializeAndDeserialize_multipleScenarioTypes_roundTrips() {
-        TestScenariosMap original = new TestScenariosMap(ALICE_WITH_EXTRA, BOB_WITH_EXTRA, RECTANGLE_WITH_EXTRA);
+        TestScenariosMap original = new TestScenariosMap(ALICE_WITH_EXTRA, BOB_WITH_EXTRA, PRODUCT_WITH_EXTRA);
 
         String json = serializer.serialize(original);
         TestScenariosMap restored = serializer.deserialize(json);
@@ -88,7 +90,7 @@ class ScenarioSerializerTest {
         assertThat(restored.size(), is(3));
         assertThat(restored.contains(UserScenario.class, ALICE_INPUT), is(true));
         assertThat(restored.contains(UserScenario.class, BOB_INPUT), is(true));
-        assertThat(restored.contains(RectangleScenario.class, RECTANGLE_INPUT), is(true));
+        assertThat(restored.contains(ProductScenario.class, PRODUCT_INPUT), is(true));
     }
 
     @Test
@@ -127,13 +129,13 @@ class ScenarioSerializerTest {
 
     @Test
     void deserialize_mixedValidAndInvalidTypes_preservesValidOnes() {
-        TestScenariosMap original = new TestScenariosMap(ALICE_WITH_EXTRA, RECTANGLE_WITH_EXTRA);
-        String json = serializer.serialize(original).replace("RectangleScenario", "InvalidScenario");
+        TestScenariosMap original = new TestScenariosMap(ALICE_WITH_EXTRA, PRODUCT_WITH_EXTRA);
+        String json = serializer.serialize(original).replace("ProductScenario", "InvalidScenario");
 
         TestScenariosMap restored = serializer.deserialize(json);
 
         assertThat(restored.size(), is(1));
         assertThat(restored.contains(UserScenario.class, ALICE_INPUT), is(true));
-        assertThat(restored.contains(RectangleScenario.class, RECTANGLE_INPUT), is(false));
+        assertThat(restored.contains(ProductScenario.class, PRODUCT_INPUT), is(false));
     }
 }

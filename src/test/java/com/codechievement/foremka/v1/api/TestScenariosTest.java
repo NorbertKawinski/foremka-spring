@@ -6,7 +6,7 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import com.codechievement.foremka.v1.components.InMemoryScenarioRepository;
-import com.codechievement.foremka.v1.fixture.RectangleScenario;
+import com.codechievement.foremka.v1.fixture.ProductScenario;
 import com.codechievement.foremka.v1.fixture.UserScenario;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.AfterEach;
@@ -88,8 +88,8 @@ class TestScenariosTest {
 
     @Test
     void get_withComplexInputFactory() {
-        RectangleScenario scenario = testScenarios.get(RECTANGLE_FACTORY, RECTANGLE_INPUT);
-        assertThat(scenario, is(RECTANGLE_SCENARIO));
+        ProductScenario scenario = testScenarios.get(PRODUCT_FACTORY, PRODUCT_INPUT);
+        assertThat(scenario, is(PRODUCT_SCENARIO));
     }
 
     @Test
@@ -100,7 +100,7 @@ class TestScenariosTest {
         testScenarios.destroy();
 
         assertThat(repository.findAll().isPresent(), is(true));
-        assertThat(repository.findAll().get(), containsString("alice"));
+        assertThat(repository.findAll().get(), containsString("alice@example.com"));
     }
 
     @Test

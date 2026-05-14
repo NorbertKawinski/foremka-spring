@@ -1,5 +1,6 @@
 package com.codechievement.foremka.v1;
 
+import static com.codechievement.foremka.v1.fixture.TestScenarioSamples.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 
@@ -24,8 +25,10 @@ class TestScenariosBasicIntegrationTest {
     void scenarioFactory_createsScenario() {
         UserScenario scenario = userScenarioProvider.get("alice");
 
+        assertThat(scenario.id(), is(ALICE_SCENARIO.id()));
         assertThat(scenario.username(), is("alice"));
-        assertThat(scenario.email(), is("alice@test.com"));
+        assertThat(scenario.email(), is("alice@example.com"));
+        assertThat(scenario.role(), is("USER"));
     }
 
     @Test
@@ -34,6 +37,7 @@ class TestScenariosBasicIntegrationTest {
         UserScenario second = userScenarioProvider.get("bob");
 
         assertThat(first, is(sameInstance(second)));
+        assertThat(first.id(), is(BOB_SCENARIO.id()));
         assertThat(first.username(), is("bob"));
     }
 
@@ -43,7 +47,9 @@ class TestScenariosBasicIntegrationTest {
         UserScenario bob = userScenarioProvider.get("bob");
 
         assertThat(alice, is(not(sameInstance(bob))));
+        assertThat(alice.id(), is(ALICE_SCENARIO.id()));
         assertThat(alice.username(), is("alice"));
+        assertThat(bob.id(), is(BOB_SCENARIO.id()));
         assertThat(bob.username(), is("bob"));
     }
 }

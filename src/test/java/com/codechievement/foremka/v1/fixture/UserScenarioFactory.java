@@ -10,8 +10,12 @@ public class UserScenarioFactory implements ScenarioFactory<String, UserScenario
         return UserScenario.class;
     }
 
+    /** Simulates a DB user INSERT: generates a hash-based ID, derives email, and assigns role. */
     @Override
     public UserScenario create(String username) {
-        return new UserScenario(username, username + "@test.com");
+        String id = String.format("user-%08x", username.hashCode());
+        String email = username + "@example.com";
+        String role = "USER";
+        return new UserScenario(id, username, email, role);
     }
 }

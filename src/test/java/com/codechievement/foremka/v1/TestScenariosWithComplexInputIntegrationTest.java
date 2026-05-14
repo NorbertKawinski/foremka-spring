@@ -1,12 +1,13 @@
 package com.codechievement.foremka.v1;
 
+import static com.codechievement.foremka.v1.fixture.TestScenarioSamples.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 
 import com.codechievement.foremka.config.TestConfig;
-import com.codechievement.foremka.v1.fixture.RectangleInput;
-import com.codechievement.foremka.v1.fixture.RectangleScenario;
-import com.codechievement.foremka.v1.fixture.RectangleScenarioProvider;
+import com.codechievement.foremka.v1.fixture.ProductInput;
+import com.codechievement.foremka.v1.fixture.ProductScenario;
+import com.codechievement.foremka.v1.fixture.ProductScenarioProvider;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
@@ -15,41 +16,40 @@ import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 class TestScenariosWithComplexInputIntegrationTest {
 
     @Autowired
-    private RectangleScenarioProvider rectangleScenarioProvider;
+    private ProductScenarioProvider productScenarioProvider;
 
     @Test
     void contextLoads() {
-        assertThat(rectangleScenarioProvider, is(notNullValue()));
+        assertThat(productScenarioProvider, is(notNullValue()));
     }
 
     @Test
     void testScenarios_acceptsComplexStructuresAsInput() {
-        RectangleScenario scenario = rectangleScenarioProvider.get(new RectangleInput(3, 4));
+        ProductScenario scenario = productScenarioProvider.get(new ProductInput("Winter Jacket", "SEASONAL", 5000));
 
-        assertThat(scenario.width(), is(3));
-        assertThat(scenario.height(), is(4));
-        assertThat(scenario.area(), is(12));
-        assertThat(scenario.perimeter(), is(14));
+        assertThat(scenario.id(), is(PRODUCT_SCENARIO.id()));
+        assertThat(scenario.name(), is("Winter Jacket"));
+        assertThat(scenario.category(), is("SEASONAL"));
+        assertThat(scenario.basePrice(), is(5000));
+        assertThat(scenario.discountedPrice(), is(3500));
     }
 
     @Test
     void testScenarios_cachesComplexStructures() {
-        RectangleInput input = new RectangleInput(5, 6);
-        RectangleScenario first = rectangleScenarioProvider.get(input);
-        RectangleScenario second = rectangleScenarioProvider.get(input);
+        ProductInput input = new ProductInput("Laptop", "ELECTRONICS", 120000);
+        ProductScenario first = productScenarioProvider.get(input);
+        ProductScenario second = productScenarioProvider.get(input);
 
         assertThat(first, is(sameInstance(second)));
     }
 
     @Test
     void testScenarios_differentInputsProduceDifferentScenarios() {
-        RectangleScenario small = rectangleScenarioProvider.get(new RectangleInput(2, 3));
-        RectangleScenario large = rectangleScenarioProvider.get(new RectangleInput(10, 20));
+        ProductScenario jacket = productScenarioProvider.get(new ProductInput("Winter Jacket", "SEASONAL", 5000));
+        ProductScenario laptop = productScenarioProvider.get(new ProductInput("Laptop", "ELECTRONICS", 120000));
 
-        assertThat(small, is(not(sameInstance(large))));
-        assertThat(small.area(), is(6));
-        assertThat(small.perimeter(), is(10));
-        assertThat(large.area(), is(200));
-        assertThat(large.perimeter(), is(60));
+        assertThat(jacket, is(not(sameInstance(laptop))));
+        assertThat(jacket.discountedPrice(), is(3500));
+        assertThat(laptop.discountedPrice(), is(108000));
     }
 }

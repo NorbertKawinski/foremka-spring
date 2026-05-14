@@ -4,4 +4,5 @@ import com.codechievement.foremka.v1.api.ScenarioProvider;
 import org.springframework.stereotype.Component;
 
 @Component
-public class RectangleScenarioProvider extends ScenarioProvider<RectangleInput, RectangleScenario> {}
+public class ProductScenarioProvider extends ScenarioProvider<ProductInput, ProductScenario> {}
+

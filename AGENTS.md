@@ -24,7 +24,7 @@
 
 ## Project-specific conventions
 - Scenario input is the cache key; inputs must have stable `equals/hashCode` (records are the intended pattern).
-- Prefer `record` for scenarios and complex inputs (see `src/test/java/.../fixture/UserScenario.java`, `RectangleInput.java`).
+- Prefer `record` for scenarios and complex inputs (see `src/test/java/.../fixture/UserScenario.java`, `ProductInput.java`).
 - Providers are tiny subclasses of `ScenarioProvider` (no custom logic by default).
 - Keep custom storage behind `ScenarioRepository`; avoid touching `internal` package from consuming apps.
 - `DatabaseScenarioRepository` validates table names via `DatabaseUtils.SafeIdentifier` (`[a-zA-Z0-9_]+` only).

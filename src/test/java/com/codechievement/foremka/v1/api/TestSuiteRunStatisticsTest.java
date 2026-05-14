@@ -18,8 +18,8 @@ class TestSuiteRunStatisticsTest {
         testScenarios.get(USER_FACTORY, ALICE_INPUT);
         testScenarios.get(USER_FACTORY, ALICE_INPUT);
         testScenarios.get(USER_FACTORY, BOB_INPUT);
-        testScenarios.get(RECTANGLE_FACTORY, RECTANGLE_INPUT);
-        testScenarios.get(RECTANGLE_FACTORY, RECTANGLE_INPUT);
+        testScenarios.get(PRODUCT_FACTORY, PRODUCT_INPUT);
+        testScenarios.get(PRODUCT_FACTORY, PRODUCT_INPUT);
 
         TestSuiteRunStatistics stats = testScenarios.getSummaryStatistics();
 
