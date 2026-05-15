@@ -1,10 +1,15 @@
 package com.codechievement.foremka.v1.fixture;
 
 import com.codechievement.foremka.v1.api.ScenarioFactory;
+import java.util.function.Consumer;
+import lombok.Setter;
 import org.springframework.stereotype.Component;
 
 @Component
 public class UserScenarioFactory implements ScenarioFactory<String, UserScenario> {
+    @Setter
+    private Consumer<UserScenario> onUserCreated;
+
     @Override
     public Class<UserScenario> getScenarioClass() {
         return UserScenario.class;
@@ -16,6 +21,11 @@ public class UserScenarioFactory implements ScenarioFactory<String, UserScenario
         String id = String.format("user-%08x", username.hashCode());
         String email = username + "@example.com";
         String role = "USER";
-        return new UserScenario(id, username, email, role);
+        var result = new UserScenario(id, username, email, role);
+
+        if (onUserCreated != null) {
+            onUserCreated.accept(result);
+        }
+        return result;
     }
 }

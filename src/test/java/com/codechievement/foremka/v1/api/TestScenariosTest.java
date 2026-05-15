@@ -120,6 +120,33 @@ class TestScenariosTest {
     }
 
     @Test
+    void computeIfAbsent_factoryCreatesAnotherScenario_doesNotDeadlock() {
+        // Regression test: Previously TestScenarios was calling ConcurrentHashMap.computeIfAbsent to create new
+        // scenario if it did not exist yet.
+        // ConcurrentHashMap.computeIfAbsent forbids re-entrant map mutations inside the mapping function.
+        // Dependent TestScenarios are the core of Foremka. Therefore, we must use a different approach to avoid
+        // deadlocks/exceptions.
+        record TinderMatchScenario(UserScenario user1, UserScenario user2) implements TestScenario {}
+
+        ScenarioFactory<Void, TinderMatchScenario> factory = ScenarioFactory.of(TinderMatchScenario.class, input -> {
+            // Nested .computeIfAbsent() call below was the cause of the deadlock.
+            var alice = testScenarios.get(USER_FACTORY, "alice");
+            var bob = testScenarios.get(USER_FACTORY, "bob");
+            return new TinderMatchScenario(alice, bob);
+        });
+
+        AtomicBoolean userFactoryCalled = new AtomicBoolean(false);
+        USER_FACTORY.setOnUserCreated(scenario -> userFactoryCalled.set(true));
+
+        assertDoesNotThrow(() -> {
+            TinderMatchScenario match = testScenarios.get(factory, null);
+            assertThat(match.user1(), is(ALICE_SCENARIO));
+            assertThat(match.user2(), is(BOB_SCENARIO));
+            assertThat(userFactoryCalled.get(), is(true));
+        });
+    }
+
+    @Test
     void destroy_cleanupEnabled_removesOnlyScenariosNotUsedInCurrentRun() {
         TestScenarios.CLEANUP_TEST_SCENARIOS = true;
         var repository = new InMemoryScenarioRepository();

@@ -8,4 +8,3 @@ package com.codechievement.foremka.v1.fixture;
  * recommended — records provide stable {@code equals} and {@code hashCode} for free.
  */
 public record ProductInput(String name, String category, int basePrice) {}
-

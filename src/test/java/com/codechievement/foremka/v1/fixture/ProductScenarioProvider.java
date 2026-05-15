@@ -5,4 +5,3 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class ProductScenarioProvider extends ScenarioProvider<ProductInput, ProductScenario> {}
-
